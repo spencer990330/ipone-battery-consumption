@@ -1,0 +1,90 @@
+---
+title: "424 project"
+author: "Hao Wang, Jing Wen, Jungwon Woo"
+date: "4/21/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+require(DescTools)
+require(dplyr)
+require(gmodels)
+library('readxl')
+```
+
+```{r}
+project = read.csv("project_424.csv")
+colnames(project)=c("battery consumption (%)","E","screen","A","B", "C","D","ratio")
+
+# Battery consumption ~ every factors with four blocks 
+aov_ratio=aov(ratio~E+A*B*C*D, project) 
+summary(aov_ratio)  # Effect of factor D is found insignificant
+lm_ratio <- lm(ratio~E+A*B*C*D, project)
+# QQ plot for the model
+v_effect <- coef(lm_ratio)[-1]*2
+dat_qq <- qqnorm(v_effect, ylab="effect", datax=T)
+qqline(v_effect, probs=c(0.3,0.7), datax=T)
+text(dat_qq$x, dat_qq$y, names(v_effect), pos=4)
+# Lenth plot to screen the significant factors
+library(BsMD)
+LenthPlot(aov_ratio, main = "Lenth Plot of Effects including A,B,C,D", cex.fac=0.5)
+
+
+aov_ratio_D=aov(ratio~E+A*B*C, project) # build model after deleting D
+summary(aov_ratio_D)  # The effects of interactions are also found insignificant
+lm_ratio_D <- lm(ratio~E+A*B*C, project)
+v_effect_D <- coef(lm_ratio_D)[-1]*2
+dat_qq_D <- qqnorm(v_effect_D, ylab="effect", datax=T)
+qqline(v_effect_D, probs=c(0.3,0.7), datax=T)
+text(dat_qq_D$x, dat_qq_D$y, names(v_effect_D), pos=4)
+library(BsMD)
+LenthPlot(aov_ratio_D, main = "Lenth Plot of Effects including A,B,C", cex.fac=0.5)
+
+# Tukey's test to find out which phone is the most enerygy efficient
+aov_tukey = aov(ratio ~ E +A+B+C, project) # build model after deleting D, interactions
+TukeyHSD(aov_tukey) 
+# for multiple comparison
+# P values are not significant and its proximity to 0 means there is no difference in phone type. We believe this is due to the fact that we did not take the battery health into account and each of our phones happened to have almost similar amounts of battery capacity.   
+
+lm_ratio_D_inter=lm(ratio~E+A+B+C, project)
+summary(lm_ratio_D_inter)
+```
+ 
+ 
+ 
+```{r}
+# residual plot and qq plot
+plot(fitted(lm_ratio_D_inter),resid(lm_ratio_D_inter),pch=23,bg="red",cex=1.2,
+     xlab="Fitted Y Values (Predicted battery consumption per minute)",
+     ylab="Residuals",
+     main="Residual plot")     # the assumption of homoskedasticity does not hold
+abline(a=0,b=0,col="blue",lwd=2)
+qqnorm(rstudent(lm_ratio_final),pch=23,bg="red",cex=1.2,
+     main="QQ plot with Standardized Residuals")
+abline(a=0,b=1,col="blue",lwd=2)
+```
+
+```{r}
+library(MASS)
+boxcox(lm_ratio_D_inter)   # transform response to fulfill homoskedasticity
+lm_ratio_final=lm(I(ratio^0.7)~E+A+B+C,project)   #lambda=0.7
+summary(lm_ratio_final)
+plot(fitted(lm_ratio_final),resid(lm_ratio_final),pch=23,bg="red",cex=1.2,
+     xlab="Fitted tramsformed Y Values (Predicted battery consumption per minute)",
+     ylab="Residuals",
+     main="Residual plot")
+abline(a=0,b=0,col="blue",lwd=2)
+qqnorm(rstudent(lm_ratio_final),pch=23,bg="red",cex=1.2,
+     main="QQ plot with Standardized Residuals")
+abline(a=0,b=1,col="blue",lwd=2)
+```
+
+
+
+
+
+                     
+                     
+                     
